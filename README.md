@@ -34,7 +34,6 @@ I2C Register Map
 
 Note that each register is 1 byte (8 bits).
 
- -------------------------------------------------------------------------------
 | Address  |  Name  | Description                               | Initial Value |
 |----------|--------|-------------------------------------------|---------------|
 |   00h    |  BTN_0 | Buttons such as Minus, Home, and Capture. |      00h      |
@@ -44,13 +43,11 @@ Note that each register is 1 byte (8 bits).
 |   04h    |   LY   | Left joystick y-axis.                     |      80h      |
 |   05h    |   RX   | Right joystick x-axis.                    |      80h      |
 |   06h    |   RY   | Right joystick y-axis.                    |      80h      |
- -------------------------------------------------------------------------------
 
 ### 00h - BTN_0
 
 Presses or releases the button. 0 is release, 1 is press. All buttons are released by default.
 
- ------------------
 | Bit | Button     |
 |-----|------------|
 | 7:6 | [reserved] |
@@ -60,13 +57,11 @@ Presses or releases the button. 0 is release, 1 is press. All buttons are releas
 |  2  | LCLICK     |
 |  1  | PLUS       |
 |  0  | MINUS      |
- ------------------
 
 ### 01h - BTN_1
 
 Presses or releases the button. 0 is release, 1 is press. All buttons are released by default.
 
- --------------
 | Bit | Button |
 |-----|--------|
 |  7  | ZR     |
@@ -77,13 +72,11 @@ Presses or releases the button. 0 is release, 1 is press. All buttons are releas
 |  2  | A      |
 |  1  | B      |
 |  0  | Y      |
- --------------
 
 ### 02h - HAT
 
 Control the Directional Pad (d-pad). This is in neutral position by default.
 
- --------------------
 | Value | Direction  |
 |-------|------------|
 |  00h  | Up         |
@@ -95,9 +88,8 @@ Control the Directional Pad (d-pad). This is in neutral position by default.
 |  06h  | Left       |
 |  07h  | Up-Left    |
 |  08h  | Neutral    |
- --------------------
 
-### 02h:026
+### 03h:06h
 
 Registers 03h through 06h control the joysticks. 00h corresponds to completely left/down, 80h is neutral, and FFh is completely right/up. They are all set to neutral by default.
 
