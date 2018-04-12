@@ -1,19 +1,115 @@
-## Switch-Fightstick
-Proof-of-Concept Fightstick for the Nintendo Switch. Uses the LUFA library and reverse-engineering of the Pokken Tournament Pro Pad for the Wii U to enable custom fightsticks on the Switch System v3.0.0.
 
-### Wait, what?
-On June 20, 2017, Nintendo released System Update v3.0.0 for the Nintendo Switch. Along with a number of additional features that were advertised or noted in the changelog, additional hidden features were added. One of those features allows for the use of compatible controllers, such as the Pokken Tournament Pro Pad, to be used on the Nintendo Switch.
+Switch-I2C-Controller
+=====================
 
-Unlike the Wii U, which handles these controllers on a 'per-game' basis, the Switch treats the Pokken controller as if it was a Switch Pro Controller. Along with having the icon for the Pro Controller, it functions just like it in terms of using it in other games, apart from the lack of physical controls such as analog sticks, the buttons for the stick clicks, or other system buttons such as Home or Capture.
+This allows an Atmel AVR microcontroller to be a bridge between a Nintendo Switch and an I2C master, such as an Arduino or Odroid. After programming, the AVR will take I2C commands that in turn will control send controller commands via USB to a Switch. This has all of the standard buttons available, but does not support motion.
 
-### But games like ARMS use the analog sticks!
-The Pokken Tournament Pro Pad was made by HORI, who also makes controllers for other consoles; because of this, the descriptors provided to Nintendo for the Pokken controller are **very** similar to that of some third-party PS3 controllers. In fact, the Pokken Tournament Pro Pad -can- be used on the PS3 without anything special needing to be done. The original descriptors feature 13 buttons, two analog sticks, a HAT switch, and some vendor-specific items that we can safely ignore. Compare this to a PS3 controller, which has...13 buttons (4 Face, 4 Shoulders, 2 Sticks, Select/Start, and PS), two analog sticks, and a HAT switch (the D-Pad). 
+Uses the LUFA library and reverse-engineering of the Pokken Tournament Pro Pad for the Wii U.
 
-### What do you mean by 'original descriptors?'
-Turns out we can modify the descriptors to expose up to 16 buttons at **least**. The Switch Pro Controller has 14 buttons on it, and as it turns out, the modified set of descriptors does allow us to enable the use of the most important button:
+This also uses an I2C slave driver that was modified from [here](https://github.com/thegouger/avr-i2c-slave).
 
-### Is it the Captu-
+The default I2C address is 0x51, but this can be modified in the [makefile](makefile).
 
-# THE CAPTURE BUTTON
+It should go without saying, but make sure the voltages match between master and slave or use level shifters!
 
-The Switch Pro Controller also exposes **additional** buttons within its descriptors; however, it's unknown as to what those do at this time. These come immediately after the HAT, so I'm under the assumption that they may be individual button presses instead of an angle. That being said, considering how flexible the Switch is with the Pokken controller descriptors, we may be able to mirror the Switch Pro Controller descriptors up to a certain point.
+Tested on a Pro Micro 3.3V (cheap clone of the Sparkfun Pro Micro).
+
+I2C Commands
+============
+
+### Writing
+
+After the address frame, the next byte should have the first register you wish to write to. The following byte will write to that register. Any subsequent bytes sent (until the STOP command) will write to the next register.
+
+For example, the command [02h,00h,FFh] says to start on the HAT register. The next byte, 00h, will be written to the HAT register. The last byte, FFh, will be written to the LX register.
+
+### Reading
+
+We can also read the current controller button presses. First a single byte must be written to the device to tell it which register we want to start with. If we wanted to read the RX register, this byte would be 05h. Then the read command is sent, during which the device will return each register in order.
+
+For example, say we wanted to read every register. We would start by writing 00h, which tells it to start at register BTN_0. We would then read 7 bytes. The device will return the contents of each register, starting from register 00h and ending on register 06h.
+
+I2C Register Map
+================
+
+Note that each register is 1 byte (8 bits).
+
+ -------------------------------------------------------------------------------
+| Address  |  Name  | Description                               | Initial Value |
+|----------|--------|-------------------------------------------|---------------|
+|   00h    |  BTN_0 | Buttons such as Minus, Home, and Capture. |      00h      |
+|   01h    |  BTN_1 | Buttons such as A, B, and X.              |      00h      |
+|   02h    |   HAT  | Directional pad.                          |      08h      |
+|   03h    |   LX   | Left joystick x-axis.                     |      80h      |
+|   04h    |   LY   | Left joystick y-axis.                     |      80h      |
+|   05h    |   RX   | Right joystick x-axis.                    |      80h      |
+|   06h    |   RY   | Right joystick y-axis.                    |      80h      |
+ -------------------------------------------------------------------------------
+
+### 00h - BTN_0
+
+Presses or releases the button. 0 is release, 1 is press. All buttons are released by default.
+
+ ------------------
+| Bit | Button     |
+|-----|------------|
+| 7:6 | [reserved] |
+|  5  | CAPTURE    |
+|  4  | HOME       |
+|  3  | RCLICK     |
+|  2  | LCLICK     |
+|  1  | PLUS       |
+|  0  | MINUS      |
+ ------------------
+
+### 01h - BTN_1
+
+Presses or releases the button. 0 is release, 1 is press. All buttons are released by default.
+
+ --------------
+| Bit | Button |
+|-----|--------|
+|  7  | ZR     |
+|  6  | ZL     |
+|  5  | R      |
+|  4  | L      |
+|  3  | X      |
+|  2  | A      |
+|  1  | B      |
+|  0  | Y      |
+ --------------
+
+### 02h - HAT
+
+Control the Directional Pad (d-pad). This is in neutral position by default.
+
+ --------------------
+| Value | Direction  |
+|-------|------------|
+|  00h  | Up         |
+|  01h  | Up-Right   |
+|  02h  | Right      |
+|  03h  | Down-Right |
+|  04h  | Down       |
+|  05h  | Down-Left  |
+|  06h  | Left       |
+|  07h  | Up-Left    |
+|  08h  | Neutral    |
+ --------------------
+
+### 02h:026
+
+Registers 03h through 06h control the joysticks. 00h corresponds to completely left/down, 80h is neutral, and FFh is completely right/up. They are all set to neutral by default.
+
+Flashing
+========
+
+Before compiling, edit the [makefile](makefile) for the desired microcontroller, clock speed, and I2C address. There is plenty of documentation out there on how to download gcc-avr and avr-libc for various operating systems.
+
+If you have trouble compiling, the [build](build/) directory has several pre-built hex files for several common boards such as the Sparkfun Pro Micro and the Teensy 2.0. Note that these all have internal I2C pullup resistors enabled.
+
+Teensy users can use [Teensy Loader](https://github.com/bertrandom/snowball-thrower/pull/1) to upload the final hex file.
+
+Arduino users can copy and paste the upload command from the Arduino IDE (turn on verbose upload) to upload the final hex file. Just edit the command to point to the hex file location.
+
+Additionally, I have included my [quick flasher program](flash.py) that I use. This is just for my own ease, it is not necessary. Mileage my vary.
