@@ -38,5 +38,6 @@ main() {
   generate ${PREFIX}_Leonardo_$ADDR    atmega32u4  16000000 $ADDR $PULLUPS
   final_clean
 }
+# This is a test of remote commits on my editor.
 
 main
